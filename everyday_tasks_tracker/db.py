@@ -5,10 +5,13 @@ from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent.parent / "tasks.db"
 
+DEFAULT_COLOR = "#6c8cff"
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL UNIQUE
+    name TEXT NOT NULL UNIQUE,
+    color TEXT NOT NULL DEFAULT '#6c8cff'
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -21,6 +24,17 @@ CREATE TABLE IF NOT EXISTS tasks (
     done INTEGER NOT NULL DEFAULT 0
 );
 """
+
+COLOR_PALETTE = [
+    "#6c8cff",
+    "#5cc98c",
+    "#e5677a",
+    "#f0b429",
+    "#a78bfa",
+    "#4fd1c5",
+    "#f472b6",
+    "#fb923c",
+]
 
 
 @contextmanager
@@ -35,15 +49,28 @@ def get_connection() -> Iterator[sqlite3.Connection]:
         connection.close()
 
 
-DEFAULT_CATEGORIES = ["Work", "Personal", "Health", "Home"]
+DEFAULT_CATEGORIES = [
+    ("Work", COLOR_PALETTE[0]),
+    ("Personal", COLOR_PALETTE[1]),
+    ("Health", COLOR_PALETTE[2]),
+    ("Home", COLOR_PALETTE[3]),
+]
 
 
 def init_db() -> None:
     with get_connection() as connection:
         connection.executescript(SCHEMA)
+
+        columns = {row["name"] for row in connection.execute("PRAGMA table_info(categories)")}
+        if "color" not in columns:
+            connection.execute(f"ALTER TABLE categories ADD COLUMN color TEXT NOT NULL DEFAULT '{DEFAULT_COLOR}'")
+            for row in connection.execute("SELECT id FROM categories").fetchall():
+                color = COLOR_PALETTE[row["id"] % len(COLOR_PALETTE)]
+                connection.execute("UPDATE categories SET color = ? WHERE id = ?", (color, row["id"]))
+
         (count,) = connection.execute("SELECT COUNT(*) FROM categories").fetchone()
         if count == 0:
             connection.executemany(
-                "INSERT INTO categories (name) VALUES (?)",
-                [(name,) for name in DEFAULT_CATEGORIES],
+                "INSERT INTO categories (name, color) VALUES (?, ?)",
+                DEFAULT_CATEGORIES,
             )

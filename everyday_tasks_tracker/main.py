@@ -15,7 +15,7 @@ from everyday_tasks_tracker.models import CategoryCreate, CategoryOut, TaskCreat
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
 TASK_SELECT = """
-    SELECT tasks.*, categories.name AS category_name
+    SELECT tasks.*, categories.name AS category_name, categories.color AS category_color
     FROM tasks
     JOIN categories ON categories.id = tasks.category_id
 """
@@ -45,6 +45,7 @@ def _row_to_task(row: sqlite3.Row) -> TaskOut:
         description=row["description"],
         category_id=row["category_id"],
         category_name=row["category_name"],
+        category_color=row["category_color"],
         start_date=row["start_date"],
         end_date=row["end_date"],
         done=bool(row["done"]),
@@ -55,7 +56,7 @@ def _row_to_task(row: sqlite3.Row) -> TaskOut:
 def list_categories() -> list[CategoryOut]:
     with get_connection() as connection:
         rows = connection.execute("SELECT * FROM categories ORDER BY name").fetchall()
-    return [CategoryOut(id=row["id"], name=row["name"]) for row in rows]
+    return [CategoryOut(id=row["id"], name=row["name"], color=row["color"]) for row in rows]
 
 
 @app.post("/api/categories", response_model=CategoryOut, status_code=201)
@@ -65,9 +66,11 @@ def create_category(payload: CategoryCreate) -> CategoryOut:
         existing = connection.execute("SELECT * FROM categories WHERE name = ?", (name,)).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="Category already exists")
-        cursor = connection.execute("INSERT INTO categories (name) VALUES (?)", (name,))
+        cursor = connection.execute(
+            "INSERT INTO categories (name, color) VALUES (?, ?)", (name, payload.color)
+        )
         category_id = cursor.lastrowid
-    return CategoryOut(id=category_id, name=name)
+    return CategoryOut(id=category_id, name=name, color=payload.color)
 
 
 @app.delete("/api/categories/{category_id}", status_code=204)
