@@ -15,6 +15,11 @@ class CategoryOut(BaseModel):
     id: int
     name: str
     color: str
+    position: int
+
+
+class CategoryReorder(BaseModel):
+    category_ids: list[int] = Field(min_length=1)
 
 
 class TaskCreate(BaseModel):

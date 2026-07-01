@@ -15,6 +15,28 @@ const CATEGORY_COLORS = [
   "#fb923c",
 ];
 
+let draggedCategoryId = null;
+
+function animateReorder(mutate) {
+  const columns = [...boardEl.querySelectorAll(".column[data-category-id]")];
+  const firstRects = new Map(columns.map((el) => [el, el.getBoundingClientRect()]));
+
+  mutate();
+
+  for (const el of columns) {
+    const first = firstRects.get(el);
+    const last = el.getBoundingClientRect();
+    const dx = first.left - last.left;
+    if (!dx) continue;
+    el.style.transition = "none";
+    el.style.transform = `translateX(${dx}px)`;
+    requestAnimationFrame(() => {
+      el.style.transition = "transform 180ms ease";
+      el.style.transform = "";
+    });
+  }
+}
+
 async function api(path, options) {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -52,9 +74,33 @@ function buildColumn(category, tasks) {
   const column = document.createElement("div");
   column.className = "column";
   column.style.borderTopColor = color;
+  column.dataset.categoryId = category.id;
+
+  column.addEventListener("dragover", (event) => {
+    if (draggedCategoryId === null || draggedCategoryId === category.id) return;
+    event.preventDefault();
+    const draggedEl = boardEl.querySelector(`.column[data-category-id="${draggedCategoryId}"]`);
+    if (!draggedEl) return;
+    const rect = column.getBoundingClientRect();
+    const before = event.clientX < rect.left + rect.width / 2;
+    const target = before ? column : column.nextSibling;
+    if (draggedEl === target || draggedEl.nextSibling === target) return;
+    animateReorder(() => boardEl.insertBefore(draggedEl, target));
+  });
 
   const header = document.createElement("div");
   header.className = "column-header";
+  header.draggable = true;
+  header.addEventListener("dragstart", (event) => {
+    draggedCategoryId = category.id;
+    event.dataTransfer.effectAllowed = "move";
+    column.classList.add("dragging");
+  });
+  header.addEventListener("dragend", () => {
+    column.classList.remove("dragging");
+    draggedCategoryId = null;
+    persistColumnOrder();
+  });
 
   const title = document.createElement("h2");
   const dot = document.createElement("span");
@@ -333,6 +379,19 @@ async function toggleDone(taskId, done) {
 async function deleteTask(taskId) {
   await api(`/api/tasks/${taskId}`, { method: "DELETE" });
   loadBoard();
+}
+
+async function persistColumnOrder() {
+  const ids = [...boardEl.querySelectorAll(".column[data-category-id]")].map((el) => Number(el.dataset.categoryId));
+  try {
+    await api("/api/categories/reorder", {
+      method: "PUT",
+      body: JSON.stringify({ category_ids: ids }),
+    });
+  } catch (error) {
+    alert(error.message);
+    loadBoard();
+  }
 }
 
 async function deleteCategory(category) {
