@@ -11,7 +11,8 @@ SCHEMA = """
 CREATE TABLE IF NOT EXISTS categories (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL UNIQUE,
-    color TEXT NOT NULL DEFAULT '#6c8cff'
+    color TEXT NOT NULL DEFAULT '#6c8cff',
+    position INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS tasks (
@@ -67,10 +68,15 @@ def init_db() -> None:
             for row in connection.execute("SELECT id FROM categories").fetchall():
                 color = COLOR_PALETTE[row["id"] % len(COLOR_PALETTE)]
                 connection.execute("UPDATE categories SET color = ? WHERE id = ?", (color, row["id"]))
+        if "position" not in columns:
+            connection.execute("ALTER TABLE categories ADD COLUMN position INTEGER NOT NULL DEFAULT 0")
+            rows = connection.execute("SELECT id FROM categories ORDER BY name").fetchall()
+            for position, row in enumerate(rows):
+                connection.execute("UPDATE categories SET position = ? WHERE id = ?", (position, row["id"]))
 
         (count,) = connection.execute("SELECT COUNT(*) FROM categories").fetchone()
         if count == 0:
             connection.executemany(
-                "INSERT INTO categories (name, color) VALUES (?, ?)",
-                DEFAULT_CATEGORIES,
+                "INSERT INTO categories (name, color, position) VALUES (?, ?, ?)",
+                [(name, color, position) for position, (name, color) in enumerate(DEFAULT_CATEGORIES)],
             )

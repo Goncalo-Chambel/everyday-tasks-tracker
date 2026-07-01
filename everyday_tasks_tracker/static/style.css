@@ -143,6 +143,11 @@ button.primary:hover {
   display: flex;
   flex-direction: column;
   max-height: calc(100vh - 120px);
+  will-change: transform;
+}
+
+.column.dragging {
+  opacity: 0.4;
 }
 
 .column-header {
@@ -151,6 +156,11 @@ button.primary:hover {
   justify-content: space-between;
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--border);
+  cursor: grab;
+}
+
+.column-header:active {
+  cursor: grabbing;
 }
 
 .column-header h2 {

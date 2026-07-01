@@ -10,7 +10,14 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from everyday_tasks_tracker.db import get_connection, init_db
-from everyday_tasks_tracker.models import CategoryCreate, CategoryOut, TaskCreate, TaskOut, TaskUpdate
+from everyday_tasks_tracker.models import (
+    CategoryCreate,
+    CategoryOut,
+    CategoryReorder,
+    TaskCreate,
+    TaskOut,
+    TaskUpdate,
+)
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
@@ -55,8 +62,10 @@ def _row_to_task(row: sqlite3.Row) -> TaskOut:
 @app.get("/api/categories", response_model=list[CategoryOut])
 def list_categories() -> list[CategoryOut]:
     with get_connection() as connection:
-        rows = connection.execute("SELECT * FROM categories ORDER BY name").fetchall()
-    return [CategoryOut(id=row["id"], name=row["name"], color=row["color"]) for row in rows]
+        rows = connection.execute("SELECT * FROM categories ORDER BY position").fetchall()
+    return [
+        CategoryOut(id=row["id"], name=row["name"], color=row["color"], position=row["position"]) for row in rows
+    ]
 
 
 @app.post("/api/categories", response_model=CategoryOut, status_code=201)
@@ -66,11 +75,22 @@ def create_category(payload: CategoryCreate) -> CategoryOut:
         existing = connection.execute("SELECT * FROM categories WHERE name = ?", (name,)).fetchone()
         if existing:
             raise HTTPException(status_code=409, detail="Category already exists")
+        (next_position,) = connection.execute("SELECT COALESCE(MAX(position), -1) + 1 FROM categories").fetchone()
         cursor = connection.execute(
-            "INSERT INTO categories (name, color) VALUES (?, ?)", (name, payload.color)
+            "INSERT INTO categories (name, color, position) VALUES (?, ?, ?)", (name, payload.color, next_position)
         )
         category_id = cursor.lastrowid
-    return CategoryOut(id=category_id, name=name, color=payload.color)
+    return CategoryOut(id=category_id, name=name, color=payload.color, position=next_position)
+
+
+@app.put("/api/categories/reorder", status_code=204)
+def reorder_categories(payload: CategoryReorder) -> None:
+    with get_connection() as connection:
+        existing_ids = {row["id"] for row in connection.execute("SELECT id FROM categories").fetchall()}
+        if set(payload.category_ids) != existing_ids:
+            raise HTTPException(status_code=400, detail="category_ids must match existing categories exactly")
+        for position, category_id in enumerate(payload.category_ids):
+            connection.execute("UPDATE categories SET position = ? WHERE id = ?", (position, category_id))
 
 
 @app.delete("/api/categories/{category_id}", status_code=204)
