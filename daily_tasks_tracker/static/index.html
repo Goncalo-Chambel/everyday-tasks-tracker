@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daily Tasks</title>
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1>Daily Tasks</h1>
+    <label class="checkbox-label toggle">
+      <input type="checkbox" id="show-completed" />
+      Show completed
+    </label>
+  </header>
+
+  <div id="board" class="board"></div>
+</div>
+
+<div id="task-modal" class="modal-overlay" hidden>
+  <div class="modal">
+    <button type="button" id="modal-close" class="icon-btn modal-close">✕</button>
+    <div id="modal-content"></div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
