@@ -9,8 +9,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from daily_tasks_tracker.db import get_connection, init_db
-from daily_tasks_tracker.models import CategoryCreate, CategoryOut, TaskCreate, TaskOut, TaskUpdate
+from everyday_tasks_tracker.db import get_connection, init_db
+from everyday_tasks_tracker.models import CategoryCreate, CategoryOut, TaskCreate, TaskOut, TaskUpdate
 
 STATIC_DIR = Path(__file__).resolve().parent / "static"
 
