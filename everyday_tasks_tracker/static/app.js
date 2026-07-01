@@ -15,10 +15,6 @@ const CATEGORY_COLORS = [
   "#fb923c",
 ];
 
-function getCategoryColor(categoryId) {
-  return CATEGORY_COLORS[categoryId % CATEGORY_COLORS.length];
-}
-
 async function api(path, options) {
   const response = await fetch(path, {
     headers: { "Content-Type": "application/json" },
@@ -47,11 +43,11 @@ function renderBoard(categories, tasks) {
     const categoryTasks = tasks.filter((task) => task.category_id === category.id);
     boardEl.appendChild(buildColumn(category, categoryTasks));
   }
-  boardEl.appendChild(buildAddColumnTile());
+  boardEl.appendChild(buildAddColumnTile(categories));
 }
 
 function buildColumn(category, tasks) {
-  const color = getCategoryColor(category.id);
+  const color = category.color;
 
   const column = document.createElement("div");
   column.className = "column";
@@ -103,7 +99,7 @@ function buildColumn(category, tasks) {
 function buildTaskItem(task) {
   const li = document.createElement("li");
   li.className = "task" + (task.done ? " done" : "");
-  li.style.borderLeftColor = getCategoryColor(task.category_id);
+  li.style.borderLeftColor = task.category_color;
   li.addEventListener("click", () => openTaskModal(task));
 
   const checkbox = document.createElement("input");
@@ -141,7 +137,7 @@ function openTaskModal(task) {
   categoryRow.className = "modal-category";
   const dot = document.createElement("span");
   dot.className = "category-dot";
-  dot.style.background = getCategoryColor(task.category_id);
+  dot.style.background = task.category_color;
   categoryRow.append(dot, document.createTextNode(task.category_name));
 
   const title = document.createElement("h3");
@@ -244,7 +240,7 @@ function buildAddTaskForm(categoryId, slot, openBtn) {
   return form;
 }
 
-function buildAddColumnTile() {
+function buildAddColumnTile(categories) {
   const tile = document.createElement("div");
   tile.className = "column add-column";
 
@@ -254,14 +250,14 @@ function buildAddColumnTile() {
   openBtn.textContent = "+ Add category";
   openBtn.addEventListener("click", () => {
     tile.innerHTML = "";
-    tile.appendChild(buildAddColumnForm(tile, openBtn));
+    tile.appendChild(buildAddColumnForm(tile, openBtn, categories));
   });
 
   tile.appendChild(openBtn);
   return tile;
 }
 
-function buildAddColumnForm(tile, openBtn) {
+function buildAddColumnForm(tile, openBtn, categories) {
   const form = document.createElement("form");
   form.className = "add-category-form";
 
@@ -270,6 +266,25 @@ function buildAddColumnForm(tile, openBtn) {
   nameInput.placeholder = "Category name";
   nameInput.required = true;
   nameInput.maxLength = 50;
+
+  let selectedColor = CATEGORY_COLORS[categories.length % CATEGORY_COLORS.length];
+
+  const colorRow = document.createElement("div");
+  colorRow.className = "color-swatches";
+
+  const swatchButtons = CATEGORY_COLORS.map((color) => {
+    const swatch = document.createElement("button");
+    swatch.type = "button";
+    swatch.className = "color-swatch" + (color === selectedColor ? " selected" : "");
+    swatch.style.background = color;
+    swatch.title = color;
+    swatch.addEventListener("click", () => {
+      selectedColor = color;
+      for (const btn of swatchButtons) btn.classList.toggle("selected", btn === swatch);
+    });
+    colorRow.appendChild(swatch);
+    return swatch;
+  });
 
   const actions = document.createElement("div");
   actions.className = "form-actions";
@@ -288,14 +303,14 @@ function buildAddColumnForm(tile, openBtn) {
   submitBtn.textContent = "Add";
 
   actions.append(cancelBtn, submitBtn);
-  form.append(nameInput, actions);
+  form.append(nameInput, colorRow, actions);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
     try {
       await api("/api/categories", {
         method: "POST",
-        body: JSON.stringify({ name: nameInput.value.trim() }),
+        body: JSON.stringify({ name: nameInput.value.trim(), color: selectedColor }),
       });
       loadBoard();
     } catch (error) {

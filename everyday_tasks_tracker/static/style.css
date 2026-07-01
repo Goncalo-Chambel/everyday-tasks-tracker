@@ -313,6 +313,29 @@ button.primary:hover {
   gap: 8px;
 }
 
+.color-swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.color-swatch {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.color-swatch:hover {
+  border-color: var(--text-dim);
+}
+
+.color-swatch.selected {
+  border-color: var(--text);
+}
+
 /* Task detail modal */
 
 .modal-overlay {
