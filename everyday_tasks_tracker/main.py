@@ -56,6 +56,7 @@ def _row_to_task(row: sqlite3.Row) -> TaskOut:
         start_date=row["start_date"],
         end_date=row["end_date"],
         done=bool(row["done"]),
+        completed_date=row["completed_date"],
     )
 
 
@@ -118,6 +119,9 @@ def list_tasks(done: bool | None = None, category_id: int | None = None) -> list
     if done is not None:
         conditions.append("tasks.done = ?")
         params.append(int(done))
+    else:
+        conditions.append("(tasks.done = 0 OR tasks.completed_date = ?)")
+        params.append(date.today().isoformat())
     if category_id is not None:
         conditions.append("tasks.category_id = ?")
         params.append(category_id)
@@ -180,6 +184,11 @@ def update_task(task_id: int, payload: TaskUpdate) -> TaskOut:
                 value = value.strip()
             columns.append(f"{field} = ?")
             params.append(value)
+
+        if "done" in updates:
+            columns.append("completed_date = ?")
+            params.append(date.today().isoformat() if updates["done"] else None)
+
         params.append(task_id)
         connection.execute(f"UPDATE tasks SET {', '.join(columns)} WHERE id = ?", params)
 
