@@ -1,6 +1,7 @@
 import sqlite3
 from collections.abc import Iterator
 from contextlib import contextmanager
+from datetime import date
 from pathlib import Path
 
 DB_PATH = Path(__file__).resolve().parent.parent / "tasks.db"
@@ -22,7 +23,8 @@ CREATE TABLE IF NOT EXISTS tasks (
     category_id INTEGER NOT NULL REFERENCES categories(id),
     start_date TEXT NOT NULL,
     end_date TEXT,
-    done INTEGER NOT NULL DEFAULT 0
+    done INTEGER NOT NULL DEFAULT 0,
+    completed_date TEXT
 );
 """
 
@@ -73,6 +75,13 @@ def init_db() -> None:
             rows = connection.execute("SELECT id FROM categories ORDER BY name").fetchall()
             for position, row in enumerate(rows):
                 connection.execute("UPDATE categories SET position = ? WHERE id = ?", (position, row["id"]))
+
+        task_columns = {row["name"] for row in connection.execute("PRAGMA table_info(tasks)")}
+        if "completed_date" not in task_columns:
+            connection.execute("ALTER TABLE tasks ADD COLUMN completed_date TEXT")
+            connection.execute(
+                "UPDATE tasks SET completed_date = ? WHERE done = 1", (date.today().isoformat(),)
+            )
 
         (count,) = connection.execute("SELECT COUNT(*) FROM categories").fetchone()
         if count == 0:

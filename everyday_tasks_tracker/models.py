@@ -47,3 +47,4 @@ class TaskOut(BaseModel):
     start_date: date
     end_date: date | None
     done: bool
+    completed_date: date | None
