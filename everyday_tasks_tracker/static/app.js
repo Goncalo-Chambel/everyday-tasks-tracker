@@ -203,9 +203,14 @@ function openTaskModal(task) {
   started.textContent = `Created on: ${task.start_date}`;
   dates.appendChild(started);
   if (task.end_date) {
-    const ends = document.createElement("span");
-    ends.textContent = `Completed on: ${task.end_date}`;
-    dates.appendChild(ends);
+    const due = document.createElement("span");
+    due.textContent = `Due on: ${task.end_date}`;
+    dates.appendChild(due);
+  }
+  if (task.done) {
+    const completed = document.createElement("span");
+    completed.textContent = "Completed";
+    dates.appendChild(completed);
   }
   modalContent.appendChild(dates);
 
@@ -246,6 +251,9 @@ function buildAddTaskForm(categoryId, slot, openBtn) {
   const descriptionInput = document.createElement("textarea");
   descriptionInput.placeholder = "Description (optional)";
 
+  const endDateLabel = document.createElement("label");
+  endDateLabel.textContent = "Due date (optional)";
+
   const endDateInput = document.createElement("input");
   endDateInput.type = "date";
 
@@ -266,7 +274,7 @@ function buildAddTaskForm(categoryId, slot, openBtn) {
   submitBtn.textContent = "Add";
 
   actions.append(cancelBtn, submitBtn);
-  form.append(titleInput, descriptionInput, endDateInput, actions);
+  form.append(titleInput, descriptionInput, endDateLabel, endDateInput, actions);
 
   form.addEventListener("submit", async (event) => {
     event.preventDefault();
